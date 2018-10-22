@@ -205,7 +205,7 @@ int main() {
   int lane = 1;
 
   // target velocity (if possible go at this speed)
-  double ref_vel = 25.01; //mph (refernce velocity, 0 at start)
+  double ref_vel = 0.01; //mph (refernce velocity, 0 at start)
   double target_velocity = 49.5; //mph 
 
   h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel, &target_velocity](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -344,8 +344,8 @@ int main() {
 
 			// Get the next 3 (x,y) waypoints by adding evenly 30m to the distance in Frenet coordinates of the car (car_s, 2 + 4 * lane)
 			vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-			vector<double> next_wp1 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-			vector<double> next_wp2 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+			vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+			vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
 			ptsx.push_back(next_wp0[0]);
 			ptsy.push_back(next_wp0[1]);
