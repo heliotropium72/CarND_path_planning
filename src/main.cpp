@@ -8,7 +8,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
-#include "spine.h" // needs to be downloaded still!
+#include "spline.h"
 
 using namespace std;
 
@@ -205,10 +205,10 @@ int main() {
   int lane = 1;
 
   // target velocity (if possible go at this speed)
-  double ref_vel = 0.0; //mph (refernce velocity, 0 at start)
+  double ref_vel = 25.01; //mph (refernce velocity, 0 at start)
   double target_velocity = 49.5; //mph 
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel, &target_velocity](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -262,7 +262,7 @@ int main() {
 			{
 				//Is the car is in my lane (lane width:4) and getting too close?
 				float d = sensor_fusion[i][6];
-				if (d > (4 * lane) && d < (4 * (lane + 1))
+				if (d > (4 * lane) && d < (4 * (lane + 1)))
 				{
 					double vx = sensor_fusion[i][3];
 					double vy = sensor_fusion[i][4];
@@ -272,7 +272,7 @@ int main() {
 					//We look at a (previously) predicted car position, so we also need to predict the position
 					// of the check car into the future
 					check_car_s += ((double)prev_size*0.02*check_speed);
-					if ((check_car_s > car_s) && ((check_car_s.car_s) < 30)) //30m is a safe distance right now
+					if ((check_car_s > car_s) && ((check_car_s - car_s) < 30)) //30m is a safe distance right now
 					{
 						// do some stuff here
 						// ref_vel = 29.5; //mph
@@ -296,7 +296,7 @@ int main() {
 			}
 			else if (ref_vel < target_velocity) // accelerate if everything is fine
 			{
-				ref_vel += .224
+				ref_vel += .224;
 			}
 
 			// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
@@ -361,7 +361,7 @@ int main() {
 				double shift_y = ptsy[i] - ref_y;
 
 				ptsx[i] = (shift_x*cos(0 - ref_yaw) - shift_y * sin(0 - ref_yaw));
-				ptsy[i] = (shift_x*sin(0 - ref_yaw) - shift_y * cos(0 - ref_yaw));
+				ptsy[i] = (shift_x*sin(0 - ref_yaw) + shift_y * cos(0 - ref_yaw));
 			}
 
 			// create a spline
@@ -390,7 +390,7 @@ int main() {
 
 			for (int i = 1; i <= 50 - previous_path_x.size(); i++)
 			{
-				double N = target_dist / (0.02*ref_vel / 2.24)); //0.02s... 2.24 mph->mps
+				double N = target_dist / (0.02*ref_vel / 2.24); //0.02s... 2.24 mph->mps
 				double x_point = x_add_on + (target_x) / N;
 				double y_point = s(x_point);
 
