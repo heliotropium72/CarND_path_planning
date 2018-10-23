@@ -207,8 +207,11 @@ int main() {
   // target velocity (if possible go at this speed)
   double ref_vel = 0.01; //mph (refernce velocity, 0 at start)
   double target_velocity = 49.5; //mph 
+  double acc_increment = 0.112;
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel, &target_velocity](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  double safe_distance = 30;
+
+  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &ref_vel, &target_velocity, &acc_increment, &safe_distance](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -255,6 +258,7 @@ int main() {
 			}
 
 			bool too_close = false;
+			bool lane_change = false;
 
 			//find ref_v to use
 			// Check all the objects around the car
@@ -272,31 +276,58 @@ int main() {
 					//We look at a (previously) predicted car position, so we also need to predict the position
 					// of the check car into the future
 					check_car_s += ((double)prev_size*0.02*check_speed);
-					if ((check_car_s > car_s) && ((check_car_s - car_s) < 30)) //30m is a safe distance right now
+					if ((check_car_s > car_s) && ((check_car_s - car_s) < safe_distance)) //30m is a safe distance right now
 					{
-						// do some stuff here
-						// ref_vel = 29.5; //mph
 						too_close = true;
-						if (lane > 0)
-						{
-							//if(save to go left)
-							lane -= 1; //change the lane and spline will fix the rest
+						// Attempt lane change
+
+						//TODO: Remove intendation level
+							// Define two flags depending on if there is a lane on the side
+							bool save_to_go_left = (lane > 0);
+							bool save_to_go_right = (lane < 2);
+
+							// Update the flag depending on if the neighboring lane is blocked by another car
+							// Check through all other car objects if the neighbouring lane is occupied
+							for (int i2 = 0; i2 < sensor_fusion.size(); i2++)
+							{
+								float d2 = sensor_fusion[i2][6];
+								if (d2 < (4*lane) or d2 > (4*(lane+1)))
+								{
+									double vx2 = sensor_fusion[i2][3];
+									double vy2 = sensor_fusion[i2][4];
+									double check_speed2 = sqrt(vx*vx + vy * vy);
+									double check_car_s2 = sensor_fusion[i2][5];
+									check_car_s2 += ((double)prev_size*0.02*check_speed2); //one step into the future
+
+									if (fabs(check_car_s2 - car_s) < safe_distance)
+									{
+										// lane number is increasing from left to right
+										if ((d2 < 4*(lane-0)) and d2 > (4*(lane-1)))
+										{
+											save_to_go_left = false;
+										}
+										else if ((d2 > 4*(lane+1)) and (d2 < 4*(lane+2)))
+										{
+											save_to_go_right = false;
+										}
+									}
+								}
+							}
+
+							if (save_to_go_left)
+							{
+								lane_change = true;
+								lane -= 1; //change the lane and spline will fix the rest
 							// There are still previous points so the lane is not abrubt
-							//elif(save to go right)
-							//lane += 1;
-						}
+							}
+							else if (save_to_go_right)
+							{
+								lane_change = true;
+								lane += 1;
+							}
+						
 					}
 				}
-			}
-
-			// What should the car do if it gets too close to another car (on the same lane)
-			if(too_close) // deccelerate if crash is expected
-			{
-				ref_vel -= .224;
-			}
-			else if (ref_vel < target_velocity) // accelerate if everything is fine
-			{
-				ref_vel += .224;
 			}
 
 			// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
@@ -390,7 +421,18 @@ int main() {
 
 			for (int i = 1; i <= 50 - previous_path_x.size(); i++)
 			{
-				double N = target_dist / (0.02*ref_vel / 2.24); //0.02s... 2.24 mph->mps
+				// Shuold the speed change?
+				// What should the car do if it gets too close to another car (on the same lane)
+				if(too_close and !lane_change) // deccelerate if crash is expected
+				{
+					ref_vel -= acc_increment;
+				}
+				else if (ref_vel < target_velocity) // accelerate if everything is fine
+				{
+					ref_vel += acc_increment;
+				}
+
+				double N = target_dist / (0.02*ref_vel / 2.24); //0.02s ; 2.24 conversion factor between mph and m/s
 				double x_point = x_add_on + (target_x) / N;
 				double y_point = s(x_point);
 
