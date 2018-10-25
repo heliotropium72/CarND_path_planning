@@ -374,9 +374,10 @@ int main() {
 			}
 
 			// Get the next 3 (x,y) waypoints by adding evenly 30m to the distance in Frenet coordinates of the car (car_s, 2 + 4 * lane)
-			vector<double> next_wp0 = getXY(car_s + 30, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-			vector<double> next_wp1 = getXY(car_s + 60, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
-			vector<double> next_wp2 = getXY(car_s + 90, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+			float ds = 45; // distance in m along the lane which is added for the trajectory
+			vector<double> next_wp0 = getXY(car_s + ds, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y); // here happens the lane change
+			vector<double> next_wp1 = getXY(car_s + 1.5*ds, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+			vector<double> next_wp2 = getXY(car_s + 2*ds, (2 + 4 * lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
 			ptsx.push_back(next_wp0[0]);
 			ptsy.push_back(next_wp0[1]);
